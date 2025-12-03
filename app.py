@@ -33,7 +33,7 @@ edad_max_val = df['EDAD'].max()
 numero_hijos_unique = df['NÚM. HIJOS'].unique()
 
 app.layout = dbc.Container([
-    dbc.Row([html.H1("Reporte de pedidos de comida online")]),
+    dbc.Row([html.H1("Reporte de empleados")]),
     dbc.Row([
           dbc.Col([
               html.Label("Selecciona el estado civil:"), # Corrected label
