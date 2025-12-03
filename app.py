@@ -87,18 +87,18 @@ app.layout = dbc.Container([
     [Output('grafica_barras', 'figure'),
      Output('grafica_torta', 'figure'),
      Output('grafica_area', 'figure')],
-    [Input('selector_ocupacion', 'value'),
+    [Input('selector_estado_civil', 'value'),
      Input('selector_genero', 'value'),
      Input('selector_edad', 'value'),
-     Input('selector_feedback', 'value'),]
+     Input('selector_numero_hijos', 'value'),]
 )
 
-def crear_graficas(valor_ocupacion, valor_genero, valor_edad, valor_feedback):
+def crear_graficas(valor_estado_civil, valor_genero, valor_edad, valor_numero_hijos):
     # Filtrar el DataFrame según el género seleccionado
     if valor_genero is None:
-      df_filtrado = df[(df['ESTADO CIVIL'] == estado_civil_unique) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(numero_hijos_unique))]
+      df_filtrado = df[(df['ESTADO CIVIL'] == valor_estado_civil) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(valor_numero_hijos))]
     else:
-       df_filtrado = df[(df['ESTADO CIVIL'] == estado_civil_unique) & (df['EDAD'] == valor_edad) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(numero_hijos_unique))]
+       df_filtrado = df[(df['ESTADO CIVIL'] == valor_estado_civil) & (df['EDAD'] == valor_edad) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(valor_numero_hijos))]
 
 
     conteo_feedback_estado_civil = df_filtrado.groupby(['Marital Status','NÚM. HIJOS'])['EDAD'].count().reset_index().sort_values(by='NÚM. HIJOS', ascending=False)
