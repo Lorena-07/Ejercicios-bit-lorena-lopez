@@ -20,7 +20,7 @@ df
 ## 3. Crear la aplicación Dash
 external_stylesheets = [dbc.themes.QUARTZ]  ## Podemos usar diferentes temas preconfigurados
 app = Dash(__name__, external_stylesheets=external_stylesheets)
-app.title = "Reporte de pedidos de comida online"
+app.title = "Reporte de empleados"
 
 """https://www.dash-bootstrap-components.com/docs/themes/  Temas que puedo usar"""
 
