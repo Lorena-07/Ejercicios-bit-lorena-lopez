@@ -90,50 +90,108 @@ app.layout = dbc.Container([
     [Input('selector_estado_civil', 'value'),
      Input('selector_genero', 'value'),
      Input('selector_edad', 'value'),
-     Input('selector_numero_hijos', 'value'),]
+     Input('selector_numero_hijos', 'value')]
 )
-
 def crear_graficas(valor_estado_civil, valor_genero, valor_edad, valor_numero_hijos):
-    # Filtrar el DataFrame según el género seleccionado
-    if valor_genero is None:
-      df_filtrado = df[(df['ESTADO CIVIL'] == valor_estado_civil) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(valor_numero_hijos))]
-    else:
-       df_filtrado = df[(df['ESTADO CIVIL'] == valor_estado_civil) & (df['EDAD'] == valor_edad) & (df['EDAD'] >= valor_edad[0]) & (df['EDAD'] <= valor_edad[1]) & (df['NÚM. HIJOS'].isin(valor_numero_hijos))]
+    # Partimos del dataframe completo
+    df_filtrado = df.copy()
 
+    # Filtro por estado civil
+    if valor_estado_civil is not None:
+        df_filtrado = df_filtrado[df_filtrado['ESTADO CIVIL'] == valor_estado_civil]
 
-    conteo_feedback_estado_civil = df_filtrado.groupby(['Marital Status','NÚM. HIJOS'])['EDAD'].count().reset_index().sort_values(by='NÚM. HIJOS', ascending=False)
+    # Filtro por género
+    if valor_genero is not None:
+        df_filtrado = df_filtrado[df_filtrado['GENERO'] == valor_genero]
 
-    grafica_barras = px.bar(conteo_feedback_estado_civil,
-                            x='Marital Status',
-                            y='EDAD',
-                            color = 'NÚM. HIJOS',
-                            title='Promedio del tamaño de la familia por estado civil',
-                            color_discrete_sequence=['#65c78c', '#f74a50'])
+    # Filtro por rango de edad (RangeSlider devuelve [min, max])
+    if valor_edad is not None and len(valor_edad) == 2:
+        df_filtrado = df_filtrado[
+            (df_filtrado['EDAD'] >= valor_edad[0]) &
+            (df_filtrado['EDAD'] <= valor_edad[1])
+        ]
 
-    conteo_votos_feedback = df_filtrado.groupby(['NÚM. HIJOS'])['EDAD'].count().reset_index().sort_values(by='NÚM. HIJOS', ascending=False)
-    grafica_torta = px.pie(conteo_votos_feedback,
-                            names='NÚM HIJOS',
-                            values='EDAD',
-                            title='Distribución del tamaño de la familia por estado civil',
-                            color_discrete_sequence=['#65c78c', '#f74a50'])
+    # Filtro por número de hijos (CheckList devuelve lista)
+    if valor_numero_hijos:
+        df_filtrado = df_filtrado[df_filtrado['NÚM. HIJOS'].isin(valor_numero_hijos)]
 
-    grafica_area = px.area(df_filtrado, x="Educational Qualifications", y="Family size", color="GENERO",title='Gráfica de area',)
+    # Si no hay datos luego de filtrar, devolvemos gráficas vacías "amigables"
+    if df_filtrado.empty:
+        grafica_barras = px.bar(title="Sin datos para los filtros seleccionados")
+        grafica_torta = px.pie(title="Sin datos para los filtros seleccionados")
+        grafica_area = px.area(title="Sin datos para los filtros seleccionados")
 
+        for fig in [grafica_barras, grafica_torta, grafica_area]:
+            fig.update_layout(
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                paper_bgcolor='rgba(0, 0, 0, 0)'
+            )
+        return grafica_barras, grafica_torta, grafica_area
 
-    ## Esto me sirve para que el fondo de las gráficas sea transparente
-    grafica_barras.update_layout({
-    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-    })
+    # ====================================
+    # 1) GRÁFICA DE BARRAS
+    #    Personas por estado civil y número de hijos
+    # ====================================
+    conteo_ec_hijos = (
+        df_filtrado
+        .groupby(['ESTADO CIVIL', 'NÚM. HIJOS'], as_index=False)['NOMBRES Y APELLIDOS']
+        .count()
+        .rename(columns={'NOMBRES Y APELLIDOS': 'CONTEO'})
+        .sort_values(by='NÚM. HIJOS', ascending=False)
+    )
 
-    grafica_torta.update_layout({
-    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-    })
+    grafica_barras = px.bar(
+        conteo_ec_hijos,
+        x='ESTADO CIVIL',
+        y='CONTEO',
+        color='NÚM. HIJOS',
+        title='Número de personas por estado civil y número de hijos',
+        color_discrete_sequence=['#65c78c', '#f74a50']
+    )
 
-    grafica_area.update_layout({
-    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-    })
+    # ====================================
+    # 2) GRÁFICA DE TORTA
+    #    Distribución de estado civil
+    # ====================================
+    conteo_estado_civil = (
+        df_filtrado
+        .groupby('ESTADO CIVIL', as_index=False)['NOMBRES Y APELLIDOS']
+        .count()
+        .rename(columns={'NOMBRES Y APELLIDOS': 'CONTEO'})
+    )
+
+    grafica_torta = px.pie(
+        conteo_estado_civil,
+        names='ESTADO CIVIL',
+        values='CONTEO',
+        title='Distribución de estado civil en los datos filtrados',
+        color_discrete_sequence=['#65c78c', '#f74a50']
+    )
+
+    # ====================================
+    # 3) GRÁFICA DE ÁREA
+    #    Cantidad de personas por edad (curva de distribución)
+    # ====================================
+    conteo_edad = (
+        df_filtrado
+        .groupby('EDAD', as_index=False)['NOMBRES Y APELLIDOS']
+        .count()
+        .rename(columns={'NOMBRES Y APELLIDOS': 'CONTEO'})
+        .sort_values(by='EDAD')
+    )
+
+    grafica_area = px.area(
+        conteo_edad,
+        x='EDAD',
+        y='CONTEO',
+        title='Distribución de personas por edad (datos filtrados)'
+    )
+
+    # Fondos transparentes para las tres gráficas
+    for fig in [grafica_barras, grafica_torta, grafica_area]:
+        fig.update_layout(
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            paper_bgcolor='rgba(0, 0, 0, 0)'
+        )
 
     return grafica_barras, grafica_torta, grafica_area
